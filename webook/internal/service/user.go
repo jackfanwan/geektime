@@ -5,6 +5,7 @@ import (
 	"errors"
 	"gitee.com/geekbang/basic-go/webook/internal/domain"
 	"gitee.com/geekbang/basic-go/webook/internal/repository"
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -48,4 +49,27 @@ func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	u.Password = string(hash)
 	// 然后就是，存起来
 	return svc.repo.Create(ctx, u)
+}
+
+func (svc *UserService) Edit(ctx *gin.Context, user domain.User) error {
+	return svc.repo.Update(ctx, user)
+}
+
+func (svc *UserService) Profile(ctx *gin.Context) ([]domain.UserVo, error) {
+	userList, err := svc.repo.Profile(ctx)
+	if err != nil {
+		return []domain.UserVo{}, err
+	}
+	userVoList := make([]domain.UserVo, len(userList))
+	for _, bo := range userList {
+		userVoList = append(userVoList, domain.UserVo{
+			Id:          bo.Id,
+			Email:       bo.Email,
+			Password:    bo.Password,
+			AliaName:    bo.AliaName,
+			BirthDay:    bo.BirthDay,
+			Description: bo.Description,
+		})
+	}
+	return userVoList, err
 }

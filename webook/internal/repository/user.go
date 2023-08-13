@@ -4,6 +4,8 @@ import (
 	"context"
 	"gitee.com/geekbang/basic-go/webook/internal/domain"
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
+	"github.com/gin-gonic/gin"
+	"time"
 )
 
 var (
@@ -45,4 +47,18 @@ func (r *UserRepository) FindById(int64) {
 	// 先从 cache 里面找
 	// 再从 dao 里面找
 	// 找到了回写 cache
+}
+
+func (r *UserRepository) Update(ctx *gin.Context, user domain.User) error {
+	return r.dao.Update(ctx, dao.User{
+		Id:          user.Id,
+		AliaName:    user.AliaName,
+		BirthDay:    user.BirthDay,
+		Description: user.Description,
+		Utime:       time.Now().UnixMilli(),
+	})
+}
+
+func (r *UserRepository) Profile(ctx *gin.Context) ([]dao.User, error) {
+	return r.dao.Profile(ctx)
 }

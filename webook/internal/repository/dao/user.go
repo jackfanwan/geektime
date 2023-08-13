@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"time"
@@ -46,6 +47,16 @@ func (dao *UserDAO) Insert(ctx context.Context, u User) error {
 	return err
 }
 
+func (dao *UserDAO) Update(ctx *gin.Context, user User) error {
+	return dao.db.WithContext(ctx).Updates(&user).Error
+}
+
+func (dao *UserDAO) Profile(ctx *gin.Context) ([]User, error) {
+	var userList []User
+	err := dao.db.WithContext(ctx).Find(&userList).Error
+	return userList, err
+}
+
 // User 直接对应数据库表结构
 // 有些人叫做 entity，有些人叫做 model，有些人叫做 PO(persistent object)
 type User struct {
@@ -55,6 +66,9 @@ type User struct {
 	Password string
 
 	// 往这面加
+	AliaName    string
+	BirthDay    string
+	Description string
 
 	// 创建时间，毫秒数
 	Ctime int64

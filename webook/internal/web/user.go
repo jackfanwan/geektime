@@ -17,19 +17,23 @@ type UserHandler struct {
 	svc         *service.UserService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
+	birthDayExp *regexp.Regexp
 }
 
 func NewUserHandler(svc *service.UserService) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+		birthDayRegexPattern = "^\\d{4}-\\d{1,2}-\\d{1,2}$"
 	)
 	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None)
+	birthDayExp := regexp.MustCompile(birthDayRegexPattern, regexp.None)
 	return &UserHandler{
 		svc:         svc,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
+		birthDayExp: birthDayExp,
 	}
 }
 
@@ -63,20 +67,20 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	ok, err := u.emailExp.MatchString(req.Email)
-	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
-		return
-	}
-	if !ok {
-		ctx.String(http.StatusOK, "你的邮箱格式不对")
-		return
-	}
+	//ok, err := u.emailExp.MatchString(req.Email)
+	//if err != nil {
+	//	ctx.String(http.StatusOK, "系统错误")
+	//	return
+	//}
+	//if !ok {
+	//	ctx.String(http.StatusOK, "你的邮箱格式不对")
+	//	return
+	//}
 	if req.ConfirmPassword != req.Password {
 		ctx.String(http.StatusOK, "两次输入的密码不一致")
 		return
 	}
-	ok, err = u.passwordExp.MatchString(req.Password)
+	ok, err := u.passwordExp.MatchString(req.Password)
 	if err != nil {
 		// 记录日志
 		ctx.String(http.StatusOK, "系统错误")
@@ -199,7 +203,48 @@ func (u *UserHandler) Logout(ctx *gin.Context) {
 }
 
 func (u *UserHandler) Edit(ctx *gin.Context) {
+	type UserEdit struct {
+		Id          int64  `json:"id"`
+		AliaName    string `json:"aliaName"`
+		BirthDay    string `json:"birthDay"`
+		Description string `json:"description"`
+	}
 
+	var userEdit UserEdit
+	err := ctx.Bind(&userEdit)
+	if err != nil {
+		ctx.String(http.StatusOK, "输入参数出错啦！！！")
+		return
+	}
+	if len(userEdit.AliaName) > 50 {
+		ctx.String(http.StatusOK, "昵称的长度不能超过50，请重新修改！")
+		return
+	}
+	if len(userEdit.Description) > 500 {
+		ctx.String(http.StatusOK, "个人简介的长度不能超过500，请重新修改！")
+		return
+	}
+	ok, err := u.birthDayExp.MatchString(userEdit.BirthDay)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if !ok {
+		ctx.String(http.StatusOK, "生日输入错误，请检查之后重新输入，格式为1992-01-01 这种！")
+		return
+	}
+
+	err = u.svc.Edit(ctx, domain.User{
+		Id:          userEdit.Id,
+		AliaName:    userEdit.AliaName,
+		BirthDay:    userEdit.BirthDay,
+		Description: userEdit.Description,
+	})
+	if err != nil {
+		ctx.String(http.StatusOK, "修改数据出错！！！")
+		return
+	}
+	ctx.String(http.StatusOK, "修改成功!")
 }
 
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
@@ -223,7 +268,14 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "这是你的 Profile")
+	var userVoList []domain.UserVo
+	userVoList, err := u.svc.Profile(ctx)
+	if err != nil {
+		fmt.Printf("出错啦，错误为: %v", err)
+		ctx.String(http.StatusOK, "查询数据出错!!!")
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "查询成功", "data": userVoList})
 }
 
 type UserClaims struct {

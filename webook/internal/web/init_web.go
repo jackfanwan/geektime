@@ -4,14 +4,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes() *gin.Engine {
+func RegisterRoutes(u UserHandler) *gin.Engine {
 	server := gin.Default()
-	registerUsersRoutes(server)
+	registerUsersRoutes(server, u)
 	return server
 }
 
-func registerUsersRoutes(server *gin.Engine) {
-	u := &UserHandler{}
+func registerUsersRoutes(server *gin.Engine, u UserHandler) {
 	server.POST("/users/signup", u.SignUp)
 	// 这是 REST 风格
 	//server.PUT("/user", func(context *gin.Context) {
